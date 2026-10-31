@@ -7,6 +7,8 @@
 
 A miscellaneous collection of functions and tools made to be used on Open WebUI.
 
+[![REUSE status](https://api.reuse.software/badge/github.com/sentamalin/open-webui-tools)](https://api.reuse.software/info/github.com/sentamalin/open-webui-tools)
+
 ## Design philosophy
 
 * **Standardized contracts:** Tools output predictable structures to minimize confusion.
