@@ -50,8 +50,8 @@ class Tools:
 
         :param url: The full HTTP or HTTPS URL to retrieve.
         :return: A structured JSON string using Schema.org naming conventions
-          (url, headline, text, description), optionally including JSON-LD
-          metadata of type WebPage if enabled via valves.
+          (i.e. url, name, text), optionally including JSON-LD metadata of type WebPage
+          if enabled via valves.
         """
         headers = {
             "User-Agent": (
