@@ -98,18 +98,20 @@ class Tools:
         if json_ld_data:
             sourceJson = dict(json_ld_data)
 
-            # Prioritize JSON-LD `name`, then HTML title for the payload `name` key
+            # Use JSON-LD `name` instead of the HTML title if defined by author
             if sourceJson.get("name"):
                 payload["name"] = sourceJson["name"]
 
-            # Add `headline` key if defined by author.
+            # Add `headline` key if defined by author
             if sourceJson.get("headline"):
                 payload["headline"] = sourceJson["headline"]
 
-            # Add `abstract` or `description` for the payload `abstract` key if defined by author.
-            if not sourceJson.get("abstract") and sourceJson.get("description"):
-                payload["abstract"] = sourceJson["description"]
-            elif sourceJson.get("abstract"):
+            # Add `description` key if defined by author
+            if sourceJson.get("description"):
+                payload["description"] = sourceJson["description"]
+
+            # Add `abstract` key if defined by author
+            if sourceJson.get("abstract"):
                 payload["abstract"] = sourceJson["abstract"]
 
             # Prioritize `articleBody`, then `text`, then a `mainContentOfPage` element hint for the payload `text` key
