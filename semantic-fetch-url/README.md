@@ -11,8 +11,12 @@ Fetches a web page via URL. Prioritizes substantive JSON-LD (Schema.org) data an
 
 The default web fetcher `fetch_url` takes the contents of a page's `<body>`, strips out HTML tags, and dumps it into the LLM's context window. This can introduce a lot of noise. `semantic_fetch_url` solves this by:
 
-* **Prioritizing native JSON-LD (Schema.org):** Extracts structured data (`headline`, `description`, `text`) directly when authored by the site
-* **Semantic fallback:** Cascading fallback from `<main>` to `<article>` to `<body>` text extraction
+* **Prioritizing native JSON-LD (Schema.org):** Extracts structured data (`url`, `name`, `text`) directly when authored by the site
+* **Semantic fallback:** Cascading `text` extraction from (in order):
+    * JSON-LD `mainContentOfPage` property
+    * HTML `<main>` tag
+    * HTML `<article>` tag
+    * HTML `<body>` tag
 * **Pristine normalization:** Cleans whitespace chaos while respecting configurable size ceilings
 
 ## Installation
