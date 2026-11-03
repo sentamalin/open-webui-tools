@@ -115,31 +115,31 @@ class Tools:
 
         # Use available JSON-LD data first to construct payload key-values
         if json_ld_data:
-            sourceJson = dict(json_ld_data)
+            source_json = dict(json_ld_data)
 
             # Use JSON-LD `name` instead of the HTML title if defined by author
-            if sourceJson.get("name"):
-                payload["name"] = sourceJson["name"]
+            if source_json.get("name"):
+                payload["name"] = source_json["name"]
 
             # Add `headline` key if defined by author
-            if sourceJson.get("headline"):
-                payload["headline"] = sourceJson["headline"]
+            if source_json.get("headline"):
+                payload["headline"] = source_json["headline"]
 
             # Add `description` key if defined by author
-            if sourceJson.get("description"):
-                payload["description"] = sourceJson["description"]
+            if source_json.get("description"):
+                payload["description"] = source_json["description"]
 
             # Add `abstract` key if defined by author
-            if sourceJson.get("abstract"):
-                payload["abstract"] = sourceJson["abstract"]
+            if source_json.get("abstract"):
+                payload["abstract"] = source_json["abstract"]
 
             # Prioritize `articleBody`, then `text`, then a `mainContentOfPage` element hint for the payload `text` key
-            if not sourceJson.get("articleBody") and sourceJson.get("text"):
-                payload["text"] = sourceJson["text"]
-            elif sourceJson.get("articleBody"):
-                payload["text"] = sourceJson["articleBody"]
-            elif sourceJson.get("mainContentOfPage"):
-                main_content = sourceJson["mainContentOfPage"]
+            if not source_json.get("articleBody") and source_json.get("text"):
+                payload["text"] = source_json["text"]
+            elif source_json.get("articleBody"):
+                payload["text"] = source_json["articleBody"]
+            elif source_json.get("mainContentOfPage"):
+                main_content = source_json["mainContentOfPage"]
                 elements = main_content if isinstance(main_content, list) else [main_content]
                 for elem in elements:
                     css_selector = elem.get("cssSelector")
