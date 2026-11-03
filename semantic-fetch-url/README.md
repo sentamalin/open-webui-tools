@@ -29,7 +29,7 @@ The default web fetcher `fetch_url` takes the contents of a page's `<body>`, str
 
 To prevent the model from defaulting to the default `fetch_url` tool, add the following directive to your model's **System Prompt**:
 
-> **Web Fetch Policy:** When conducting web research, whenever a URL needs to be retrieved or read from search results (`search_web`), you **must** use Semantic Fetch URL (`semantic_fetch_url`) instead of standard or default fetch tools (`fetch_url`) to ensure complete content retrieval and Schema.org data normalization.
+> **Web Fetch Policy:** You **must** use Semantic Fetch URL (`semantic_fetch_url`) when retrieving a URL or reading from search results (`search_web`). **Do not use** `fetch_url`.
 
 ## Configuration valves
 
