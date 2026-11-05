@@ -8,7 +8,7 @@ description: >
   (Schema.org) data and semantic HTML tags like <main> or <article>
   before falling back to full <body> text extraction.
 requirements: httpx, beautifulsoup4, lxml
-version: 0.1.1
+version: 0.1.2
 license: MIT
 SPDX-FileCopyrightText: 2026 Don Geronimo <https://sentamal.in>
 SPDX-License-Identifier: MIT
