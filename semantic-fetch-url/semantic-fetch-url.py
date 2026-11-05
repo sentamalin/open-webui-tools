@@ -7,7 +7,7 @@ description: >
   Fetches a web page via URL. Prioritizes substantive JSON-LD
   (Schema.org) data and semantic HTML tags like <main> or <article>
   before falling back to full <body> text extraction.
-requirements: httpx, beautifulsoup4, lxml
+requirements: httpx, beautifulsoup4, lxml, markdownify
 version: 0.1.2
 license: MIT
 SPDX-FileCopyrightText: 2026 Don Geronimo <https://sentamal.in>
@@ -18,6 +18,7 @@ import json
 from bs4 import BeautifulSoup
 import httpx
 import lxml.html
+from markdownify import markdownify
 try: # A bypass stub to allow testing the function using the command line
     from pydantic import BaseModel, Field
 except ImportError:
@@ -159,9 +160,9 @@ class Tools:
                     if css_selector and soup:
                         target_el = soup.select_one(css_selector)
                         if target_el:
-                            payload["text"] = target_el.get_text(
-                                separator=" ", strip=True
-                            )
+                            payload["text"] = markdownify(
+                                str(target_el), heading_style="ATX"
+                            ).strip()
                             break
                     xpath = elem.get("xpath")
                     if xpath and soup:
@@ -169,11 +170,16 @@ class Tools:
                             dom = lxml.html.fromstring(str(soup))
                             matches = dom.xpath(xpath)
                             if matches and hasattr(matches[0], "text_content"):
-                                raw_xpath_text = matches[0].text_content()
-                                payload["text"] = " ".join(
-                                    raw_xpath_text.split()
-                                )
-                                break
+                                try:
+                                    html_snippet = lxml.html.tostring(
+                                        matches[0], encoding="unicode"
+                                    )
+                                    payload["text"] = markdownify(
+                                        html_snippet, heading_style="ATX"
+                                    ).strip()
+                                    break
+                                except Exception:
+                                    pass
                         except Exception:
                             pass
 
@@ -186,8 +192,9 @@ class Tools:
                 or soup.body
                 or soup
             )
-            raw_text = content_container.get_text(separator=" ", strip=True)
-            payload["text"] = " ".join(raw_text.split())
+            payload["text"] = markdownify(
+                str(content_container), heading_style="ATX"
+            ).strip()
 
         # Truncate `text` to fit in the maximum characters if
         # `max_chars` is greater than 0
