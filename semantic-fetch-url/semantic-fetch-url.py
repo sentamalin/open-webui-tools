@@ -180,6 +180,21 @@ class Tools:
             if hint_text:
                 payload["text"] = hint_text
 
+    def _apply_semantic_fallback(
+        self, soup: BeautifulSoup, payload: dict
+    ) -> None:
+        """If `text` is missing, apply full-body semantic HTML scraping."""
+        if not payload.get("text"):
+            content_container = (
+                soup.find("main")
+                or soup.find("article")
+                or soup.body
+                or soup
+            )
+            payload["text"] = markdownify(
+                str(content_container), heading_style="ATX"
+            ).strip()
+
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
         (Schema.org) data, and falls back to normalized full-body text
@@ -206,19 +221,7 @@ class Tools:
         json_ld_data = self._extract_json_ld(soup)
         if json_ld_data:
             self._apply_json_ld_data(dict(json_ld_data), soup, payload)
-
-        # Fallback to full-body semantic HTML scraping if no `text` or
-        # `articleBody` key in JSON-LD
-        if not payload.get("text"):
-            content_container = (
-                soup.find("main")
-                or soup.find("article")
-                or soup.body
-                or soup
-            )
-            payload["text"] = markdownify(
-                str(content_container), heading_style="ATX"
-            ).strip()
+        self._apply_semantic_fallback(soup, payload)
 
         # Truncate `text` to fit in the maximum characters if
         # `max_chars` is greater than 0
