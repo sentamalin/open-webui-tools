@@ -16,6 +16,7 @@ SPDX-License-Identifier: MIT
 
 import json
 from bs4 import BeautifulSoup
+from typing import Any, Optional
 import httpx
 import lxml.html
 from markdownify import markdownify
@@ -75,6 +76,25 @@ class Tools:
         "Sec-Fetch-User": "?1",
     }
 
+    async def _fetch_html(
+        self, client: httpx.AsyncClient, url: str
+    ) -> str | dict[str, Any]:
+        """Fetches raw HTML content from the given URL."""
+        try:
+            response = await client.get(url, headers=self._HEADERS)
+            response.raise_for_status()
+            return response.text
+        except httpx.HTTPError as e:
+            error = {}
+            if self.valves.include_semantic_metadata:
+                error["@context"] = "https://schema.org/"
+                error["@type"] = "Error"
+            error["url"] = url
+            if isinstance(e, httpx.HTTPStatusError):
+                error["errorCode"] = e.response.status_code
+            error["description"] = str(e)
+            return error
+
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
         (Schema.org) data, and falls back to normalized full-body text
@@ -85,29 +105,20 @@ class Tools:
           conventions (i.e. url, name, text), optionally including
           JSON-LD metadata of type WebPage if enabled via valves.
         """
+        async with httpx.AsyncClient(
+            timeout=15.0, follow_redirects=True
+        ) as client:
+            html_content = await self._fetch_html(client, url)
 
-        try:
-            async with httpx.AsyncClient(
-                timeout=15.0, follow_redirects=True
-            ) as client:
-                response = await client.get(url, headers=self._HEADERS)
-                response.raise_for_status()
-                html_content = response.text
-        except httpx.HTTPError as e:
-            return json.dumps(
-                {
-                    "error": f"HTTP request failed: {str(e)}",
-                    "url": url,
-                }
-            )
+        if isinstance(html_content, dict):
+            return json.dumps(html_content, ensure_ascii=False, indent=2)
 
         soup = BeautifulSoup(html_content, "html.parser")
-        title = soup.title.string.strip() if soup.title else ""
         payload = {}
 
         # Get the URL and the HTML title
         payload["url"] = url
-        payload["name"] = title
+        payload["name"] = soup.title.string.strip() if soup.title else ""
 
         # Attempt to extract native JSON-LD (Schema.org) blocks
         json_ld_data = None
