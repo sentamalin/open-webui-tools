@@ -52,6 +52,29 @@ class Tools:
     def __init__(self):
         self.valves = self.Valves()
 
+    _HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (X11; Linux x86_64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="125"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Linux"',
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;q=0.9,"
+            "image/avif,image/webp,*/*;q=0.8"
+        ),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "DNT": "1",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+    }
+
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
         (Schema.org) data, and falls back to normalized full-body text
@@ -62,34 +85,12 @@ class Tools:
           conventions (i.e. url, name, text), optionally including
           JSON-LD metadata of type WebPage if enabled via valves.
         """
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (X11; Linux x86_64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
-            "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="125"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Linux"',
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;q=0.9,"
-                "image/avif,image/webp,*/*;q=0.8"
-            ),
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
-            "DNT": "1",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-        }
 
         try:
             async with httpx.AsyncClient(
                 timeout=15.0, follow_redirects=True
             ) as client:
-                response = await client.get(url, headers=headers)
+                response = await client.get(url, headers=self._HEADERS)
                 response.raise_for_status()
                 html_content = response.text
         except httpx.HTTPError as e:
