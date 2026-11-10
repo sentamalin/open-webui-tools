@@ -16,7 +16,7 @@ SPDX-License-Identifier: MIT
 
 import json
 from bs4 import BeautifulSoup
-from typing import Any, Optional
+from typing import Any
 import httpx
 import lxml.html
 from markdownify import markdownify
@@ -95,6 +95,19 @@ class Tools:
             error["description"] = str(e)
             return error
 
+    def _extract_json_ld(self, soup: BeautifulSoup) -> dict[str, Any] | None:
+        """Extracts the first valid Schema.org JSON-LD data block."""
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                parsed = json.loads(script.string or script.text)
+                if isinstance(parsed, dict):
+                    return parsed
+                elif isinstance(parsed, list) and len(parsed) > 0:
+                    return parsed[0]
+            except (json.JSONDecodeError, TypeError):
+                continue
+        return None
+
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
         (Schema.org) data, and falls back to normalized full-body text
@@ -115,24 +128,10 @@ class Tools:
 
         soup = BeautifulSoup(html_content, "html.parser")
         payload = {}
-
-        # Get the URL and the HTML title
         payload["url"] = url
         payload["name"] = soup.title.string.strip() if soup.title else ""
 
-        # Attempt to extract native JSON-LD (Schema.org) blocks
-        json_ld_data = None
-        for script in soup.find_all("script", type="application/ld+json"):
-            try:
-                parsed = json.loads(script.string or script.text)
-                if isinstance(parsed, dict):
-                    json_ld_data = parsed
-                    break
-                elif isinstance(parsed, list) and len(parsed) > 0:
-                    json_ld_data = parsed[0]
-                    break
-            except (json.JSONDecodeError, TypeError):
-                continue
+        json_ld_data = self._extract_json_ld(soup)
 
         # Use available JSON-LD data first to construct payload key-values
         if json_ld_data:
