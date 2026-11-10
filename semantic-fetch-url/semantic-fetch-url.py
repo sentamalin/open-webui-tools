@@ -108,6 +108,78 @@ class Tools:
                 continue
         return None
 
+    def _extract_via_css(
+        self, elem: dict, soup: BeautifulSoup
+    ) -> str | None:
+        """Extracts and markdownifies content matching a CSS selector."""
+        css_selector = elem.get("cssSelector")
+        if css_selector and soup:
+            target_el = soup.select_one(css_selector)
+            if target_el:
+                return markdownify(
+                    str(target_el), heading_style="ATX"
+                ).strip()
+        return None
+
+    def _extract_via_xpath(
+        self, elem: dict, soup: BeautifulSoup
+    ) -> str | None:
+        """Extracts and markdownifies content matching an XPath."""
+        xpath = elem.get("xpath")
+        if xpath and soup:
+            try:
+                dom = lxml.html.fromstring(str(soup))
+                matches = dom.xpath(xpath)
+                if matches and hasattr(matches[0], "text_content"):
+                    html_snippet = lxml.html.tostring(
+                        matches[0], encoding="unicode"
+                    )
+                    return markdownify(
+                        html_snippet, heading_style="ATX"
+                    ).strip()
+            except Exception:
+                pass
+        return None
+
+    def _resolve_main_content_hint(
+        self, main_content: Any, soup: BeautifulSoup
+    ) -> str | None:
+        """Resolves `mainContentOfPage` hints via CSS selectors or XPaths."""
+        elements = (
+            main_content
+            if isinstance(main_content, list)
+            else [main_content]
+        )
+        for elem in elements:
+            if not isinstance(elem, dict):
+                continue
+            text = self._extract_via_css(elem, soup)
+            if text:
+                return text
+            text = self._extract_via_xpath(elem, soup)
+            if text:
+                return text
+        return None
+
+    def _apply_json_ld_data(
+        self, source_json: dict, soup: BeautifulSoup, payload: dict
+    ) -> None:
+        """Populates the payload using extracted JSON-LD data."""
+        for field in ("name", "headline", "description", "abstract"):
+            if source_json.get(field):
+                payload[field] = source_json[field]
+
+        if not source_json.get("articleBody") and source_json.get("text"):
+            payload["text"] = source_json["text"]
+        elif source_json.get("articleBody"):
+            payload["text"] = source_json["articleBody"]
+        elif source_json.get("mainContentOfPage"):
+            hint_text = self._resolve_main_content_hint(
+                source_json["mainContentOfPage"], soup
+            )
+            if hint_text:
+                payload["text"] = hint_text
+
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
         (Schema.org) data, and falls back to normalized full-body text
@@ -132,67 +204,8 @@ class Tools:
         payload["name"] = soup.title.string.strip() if soup.title else ""
 
         json_ld_data = self._extract_json_ld(soup)
-
-        # Use available JSON-LD data first to construct payload key-values
         if json_ld_data:
-            source_json = dict(json_ld_data)
-
-            # Use JSON-LD `name` instead of the HTML title if defined by author
-            if source_json.get("name"):
-                payload["name"] = source_json["name"]
-
-            # Add `headline` key if defined by author
-            if source_json.get("headline"):
-                payload["headline"] = source_json["headline"]
-
-            # Add `description` key if defined by author
-            if source_json.get("description"):
-                payload["description"] = source_json["description"]
-
-            # Add `abstract` key if defined by author
-            if source_json.get("abstract"):
-                payload["abstract"] = source_json["abstract"]
-
-            # Prioritize `articleBody`, then `text`, then a
-            # `mainContentOfPage` element hint for the payload `text` key
-            if not source_json.get("articleBody") and source_json.get("text"):
-                payload["text"] = source_json["text"]
-            elif source_json.get("articleBody"):
-                payload["text"] = source_json["articleBody"]
-            elif source_json.get("mainContentOfPage"):
-                main_content = source_json["mainContentOfPage"]
-                elements = (
-                    main_content
-                    if isinstance(main_content, list)
-                    else [main_content]
-                )
-                for elem in elements:
-                    css_selector = elem.get("cssSelector")
-                    if css_selector and soup:
-                        target_el = soup.select_one(css_selector)
-                        if target_el:
-                            payload["text"] = markdownify(
-                                str(target_el), heading_style="ATX"
-                            ).strip()
-                            break
-                    xpath = elem.get("xpath")
-                    if xpath and soup:
-                        try:
-                            dom = lxml.html.fromstring(str(soup))
-                            matches = dom.xpath(xpath)
-                            if matches and hasattr(matches[0], "text_content"):
-                                try:
-                                    html_snippet = lxml.html.tostring(
-                                        matches[0], encoding="unicode"
-                                    )
-                                    payload["text"] = markdownify(
-                                        html_snippet, heading_style="ATX"
-                                    ).strip()
-                                    break
-                                except Exception:
-                                    pass
-                        except Exception:
-                            pass
+            self._apply_json_ld_data(dict(json_ld_data), soup, payload)
 
         # Fallback to full-body semantic HTML scraping if no `text` or
         # `articleBody` key in JSON-LD
