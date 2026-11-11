@@ -36,6 +36,7 @@ To prevent the model from defaulting to the default `fetch_url` tool, add the fo
 You can tune the behavior of `semantic_fetch_url` directly from the Open WebUI interface via its Pydantic valves:
 
 * `max_chars`: Maximum character ceiling for the text payload (`0` for unlimited content); default: `0`
+* `use_markdown_formatting`: Markdownify substantive textual content; default `true`
 * `include_semantic_metadata`: Include @context and @type JSON-LD keys in the output; default `false`
 
 ## License
