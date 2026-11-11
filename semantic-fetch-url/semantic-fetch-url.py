@@ -42,6 +42,12 @@ class Tools:
                 "payload (0 for no limit)."
             ),
         )
+        use_markdown_formatting: bool = Field(
+            default=True,
+            description=(
+                "Markdownify substantive textual content."
+            ),
+        )
         include_semantic_metadata: bool = Field(
             default=False,
             description=(
@@ -116,9 +122,12 @@ class Tools:
         if css_selector and soup:
             target_el = soup.select_one(css_selector)
             if target_el:
-                return markdownify(
-                    str(target_el), heading_style="ATX"
-                ).strip()
+                if self.valves.use_markdown_formatting:
+                    return markdownify(
+                        str(target_el), heading_style="ATX"
+                    ).strip()
+                else:
+                    return target_el.get_text(separator=" ", strip=True)
         return None
 
     def _extract_via_xpath(
@@ -131,12 +140,16 @@ class Tools:
                 dom = lxml.html.fromstring(str(soup))
                 matches = dom.xpath(xpath)
                 if matches and hasattr(matches[0], "text_content"):
-                    html_snippet = lxml.html.tostring(
-                        matches[0], encoding="unicode"
-                    )
-                    return markdownify(
-                        html_snippet, heading_style="ATX"
-                    ).strip()
+                    if self.valves.use_markdown_formatting:
+                        html_snippet = lxml.html.tostring(
+                            matches[0], encoding="unicode"
+                        )
+                        return markdownify(
+                            html_snippet, heading_style="ATX"
+                        ).strip()
+                    else:
+                        raw_text = matches[0].text_content()
+                        return " ".join(raw_text.split())
             except Exception:
                 pass
         return None
@@ -191,9 +204,15 @@ class Tools:
                 or soup.body
                 or soup
             )
-            payload["text"] = markdownify(
-                str(content_container), heading_style="ATX"
-            ).strip()
+            if self.valves.use_markdown_formatting:
+                payload["text"] = markdownify(
+                    str(content_container), heading_style="ATX"
+                ).strip()
+            else:
+                raw_text = content_container.get_text(
+                    separator=" ", strip=True
+                )
+                payload["text"] = " ".join(raw_text.split())
 
     async def semantic_fetch_url(self, url: str) -> str:
         """Fetches a web page, prioritizes substantive JSON-LD
